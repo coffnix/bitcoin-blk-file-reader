@@ -26,7 +26,7 @@ def publicKeyDecode(pub):
         h5 = hashlib.sha256(result)
         h6 = hashlib.sha256(h5.digest())
         result += h6.digest()[:4]
-        return base58.b58encode(result).decode('utf-8')
+        return base58.b58encode(result)
     elif pub.lower().startswith('a9'):
         return ""
     elif startsWithOpNCode(pub):
@@ -37,7 +37,7 @@ def publicKeyDecode(pub):
         h5 = hashlib.sha256(result)
         h6 = hashlib.sha256(h5.digest())
         result += h6.digest()[:4]
-        return base58.b58encode(result).decode('utf-8')
+        return base58.b58encode(result)
     return ""
 
 def stringLittleEndianToBigEndian(string):
