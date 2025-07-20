@@ -1,16 +1,46 @@
 # bitcoin-blk-file-reader
-Reads the blkXXXXX.dat files from bitcoind (Bitcoin-Core)
-The implementation is in python and includes the witness format for the extended transaction format and includes correct transaction hash calculation, which was initially forgotten to add here.
+Reads the blkXXXXX.dat files from bitcoind (Bitcoin-Core).  
+The implementation is in Python e inclui suporte ao formato de transação com witness (SegWit), cálculo correto do hash da transação (txid) e agora também a extração de mensagens de transações coinbase.
 
 ## Usage
-Normally your bitcoind client stores the blk files in $HOME/.bitcoin/blocks/
+Normalmente seu cliente bitcoind armazena os arquivos blk em:
 
-To read the first blk-file, which is blk00000.dat:
-
-```shell
-python analyze.py $HOME/.bitcoin/blocks/blk00000.dat
+```
+/storage2/bitcoin/blocks/
 ```
 
-After that you get the output to the console. This script is very easy to understand and you can use it on your own.
+Para ler o arquivo de bloco específico, como o `blk00040.dat`:
 
-NOTICE: Some addresses are not calculated yet, they are multisig addresses, I did not have time to add the code, but I will. Further the code is not very nice, since this was my first try doing this long ago. But feel free to contact me if you have any questions.
+```shell
+python analyze.py /storage2/bitcoin/blocks/blk00040.dat
+```
+
+Ou para extrair mensagens ocultas em transações coinbase:
+
+```shell
+python extract_messages.py /storage2/bitcoin/blocks/blk00040.dat
+```
+
+Esse último script localiza automaticamente os blocos via magic bytes, identifica transações coinbase e tenta decodificar mensagens ASCII legíveis no scriptSig.
+
+## Novas funcionalidades do extract_messages.py
+
+- Busca por blocos reais com magic bytes `f9beb4d9`
+- Extração e decodificação de coinbase scriptSig
+- Suporte a múltiplas mensagens por bloco
+- Filtragem por mensagens ASCII legíveis
+- Caminho de entrada `.dat` via argumento obrigatório
+
+## Exemplo de saída
+
+```
+Bloco encontrado na posição: 0x00000000
+Mensagem extraída:
+hi from poolserverj
+```
+
+## Aviso
+
+Alguns endereços multisig ainda não são calculados corretamente, pois o suporte ainda não foi adicionado.  
+O código foi escrito como protótipo inicial e pode conter melhorias pendentes.  
+Sinta-se à vontade para modificar ou entrar em contato para discutir melhorias.
