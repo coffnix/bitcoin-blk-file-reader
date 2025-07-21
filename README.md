@@ -1,46 +1,59 @@
 # bitcoin-blk-file-reader
-Reads the blkXXXXX.dat files from bitcoind (Bitcoin-Core).  
-The implementation is in Python e inclui suporte ao formato de transação com witness (SegWit), cálculo correto do hash da transação (txid) e agora também a extração de mensagens de transações coinbase.
 
-## Usage
-Normalmente seu cliente bitcoind armazena os arquivos blk em:
+Reads the blkXXXXX.dat files from bitcoind (Bitcoin Core).  
+A implementação é em Python e inclui:
+
+- suporte ao formato de transação com witness (SegWit)
+- cálculo correto do hash da transação (txid)
+- extração de mensagens ocultas da coinbase
+- verificação cruzada com altura real do bloco usando bitcoin-cli
+
+## Requisitos
+
+Certifique-se de que o `bitcoind` esteja rodando e com o RPC habilitado.  
+No `bitcoin.conf`, você deve ter:
+
+```
+rpcuser=coffnix
+rpcpassword=a1b2c3d4e5f6
+```
+
+Essas credenciais são configuráveis no topo do script `extract_messages_with_index.py`.
+
+## Caminho padrão dos arquivos
+
+Normalmente os arquivos de bloco `.dat` ficam em:
 
 ```
 /storage2/bitcoin/blocks/
 ```
 
-Para ler o arquivo de bloco específico, como o `blk00040.dat`:
+## Uso
 
-```shell
+### Análise básica de blocos
+
+```bash
 python analyze.py /storage2/bitcoin/blocks/blk00040.dat
 ```
 
-Ou para extrair mensagens ocultas em transações coinbase:
+### Extração de mensagens da coinbase
 
-```shell
+```bash
 python extract_messages.py /storage2/bitcoin/blocks/blk00040.dat
 ```
 
-Esse último script localiza automaticamente os blocos via magic bytes, identifica transações coinbase e tenta decodificar mensagens ASCII legíveis no scriptSig.
+### Extração de mensagens com índice real e altura correta do bloco
 
-## Novas funcionalidades do extract_messages.py
-
-- Busca por blocos reais com magic bytes `f9beb4d9`
-- Extração e decodificação de coinbase scriptSig
-- Suporte a múltiplas mensagens por bloco
-- Filtragem por mensagens ASCII legíveis
-- Caminho de entrada `.dat` via argumento obrigatório
-
-## Exemplo de saída
-
-```
-Bloco encontrado na posição: 0x00000000
-Mensagem extraída:
-hi from poolserverj
+```bash
+python extract_messages_with_index.py /storage2/bitcoin/blocks/blk00040.dat
 ```
 
-## Aviso
+Você pode passar um segundo argumento para filtrar por string:
 
-Alguns endereços multisig ainda não são calculados corretamente, pois o suporte ainda não foi adicionado.  
-O código foi escrito como protótipo inicial e pode conter melhorias pendentes.  
-Sinta-se à vontade para modificar ou entrar em contato para discutir melhorias.
+```bash
+python extract_messages_with_index.py /storage2/bitcoin/blocks/blk00040.dat "Jesus"
+```
+
+A saída mostrará o índice sequencial, altura do bloco (real, via bitcoin-cli), offset e mensagens ASCII com 20 ou mais caracteres.
+
+---
