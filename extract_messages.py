@@ -1,11 +1,6 @@
 import binascii
 import struct
-import datetime
-import hashlib
-import base58
 import sys
-import array
-import traceback
 
 def log(string):
     print(string)
@@ -81,7 +76,8 @@ def readInput(blockFile):
             if all(32 <= b <= 126 for b in data_bytes) and len(data_bytes) > 3:
                 message = data_bytes.decode('ascii')
                 log(message)
-
+        return True # is_coinbase
+    
 def readOutput(blockFile):
     value = hexToInt(readLongLittleEndian(blockFile)) / 100000000.0
     scriptLength = readVarInt(blockFile)
@@ -93,13 +89,16 @@ def readTransaction(blockFile):
     version = hexToInt(readIntLittleEndian(blockFile))
     inputCount = readVarInt(blockFile)
 
+    found_coinbase = False  # Flag para rastrear se encontrou coinbase
+
     if inputCount == 0:
         extendedFormat = True
         flags = blockFile.read(1)[0]
         if flags != 0:
             inputCount = readVarInt(blockFile)
     for inputIndex in range(0, inputCount):
-        readInput(blockFile)
+        if readInput(blockFile):  # readInput agora retorna True se for coinbase
+            found_coinbase = True
     outputCount = readVarInt(blockFile)
     for outputIndex in range(0, outputCount):
         readOutput(blockFile)
@@ -119,6 +118,8 @@ def readTransaction(blockFile):
     lengthToRead = endByte - beginByte
     blockFile.read(lengthToRead)  # Avançar, preservar leitura
 
+    return found_coinbase  # Retorna se encontrou coinbase
+
 def readBlock(blockFile):
     blockFile.read(4)  # Magic Number, ignorar
     blockFile.read(4)  # Blocksize, ignorar
@@ -130,7 +131,49 @@ def readBlock(blockFile):
     blockFile.read(4)  # Nonce, ignorar
     countOfTransactions = readVarInt(blockFile)
     for transactionIndex in range(0, countOfTransactions):
-        readTransaction(blockFile)
+        found_coinbase = readTransaction(blockFile)
+        if found_coinbase:
+            # Pular as transações restantes do bloco
+            for remaining in range(transactionIndex + 1, countOfTransactions):
+                skipTransaction(blockFile)
+            break
+
+def skipTransaction(blockFile):
+    """Pula uma transação inteira sem processar"""
+    extendedFormat = False
+    version = hexToInt(readIntLittleEndian(blockFile))
+    inputCount = readVarInt(blockFile)
+
+    if inputCount == 0:
+        extendedFormat = True
+        flags = blockFile.read(1)[0]
+        if flags != 0:
+            inputCount = readVarInt(blockFile)
+    
+    # Pular todos os inputs
+    for _ in range(inputCount):
+        blockFile.read(32)  # previousHash
+        blockFile.read(4)   # outId
+        scriptLength = readVarInt(blockFile)
+        blockFile.read(scriptLength)  # script
+        blockFile.read(4)   # seqNo
+    
+    # Pular todos os outputs
+    outputCount = readVarInt(blockFile)
+    for _ in range(outputCount):
+        blockFile.read(8)  # value
+        scriptLength = readVarInt(blockFile)
+        blockFile.read(scriptLength)  # scriptPubKey
+
+    # Pular witness se existir
+    if extendedFormat and (flags & 1):
+        for _ in range(inputCount):
+            countOfStackItems = readVarInt(blockFile)
+            for _ in range(countOfStackItems):
+                stackLength = readVarInt(blockFile)
+                blockFile.read(stackLength)
+
+    blockFile.read(4)  # lockTime
 
 def main():
     blockFilename = sys.argv[1]
